@@ -3,34 +3,6 @@ const { logger } = require("../../../config/winston");
 
 const userDao = require("./userDao");
 
-// Provider: Read 비즈니스 로직 처리
-
-exports.retrieveUserList = async function (nickname) {
-    if (!nickname) {
-        const connection = await pool.getConnection(async (conn) => conn);
-        const userListResult = await userDao.selectUser(connection);
-        connection.release();
-
-        return userListResult;
-
-    } else {
-        const connection = await pool.getConnection(async (conn) => conn);
-        const userListResult = await userDao.selectUserName(connection, nickname);
-        connection.release();
-
-        return userListResult;
-    }
-};
-
-exports.retrieveUser = async function (userID) {
-    const connection = await pool.getConnection(async (conn) => conn);
-    const userResult = await userDao.selectUserId(connection, userID);
-
-    connection.release();
-
-    return userResult;
-};
-
 exports.IDCheck = async function (ID) {
     const connection = await pool.getConnection(async (conn) => conn);
     const [Result] = await userDao.selectUserID(connection, ID);

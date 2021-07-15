@@ -20,6 +20,7 @@ var regexURL = new RegExp("[-a-zA-Z0-9@:%._+~#=]{1,1000}.(png|jpg)");
 var regexAccount = new RegExp("^[0-9]{10,14}");
 var regexLink = new RegExp("^(?:([A-Za-z]+):)?(\\/{0,3})([0-9.\\-A-Za-z]+)(?::(\\d+))?(?:\\/([^?#]*))?(?:\\?([^#]*))?(?:#(.*))?");
 
+// SMS로 인증코드 전송
 exports.postSMS = async function (req, res) {
     const {user_phone_number} = req.body;
     const status = req.params.status;
@@ -102,16 +103,8 @@ exports.postSMS = async function (req, res) {
             }
         }
     );
-
-    // return res.send('sdadsa');
 }
 
-/**
- * API No. 1
- * API Name : 유저 생성 (회원가입) API
- * [POST] /admin
- * Body
- */
 exports.postAdmin = async function (req, res) {
     const {adminId, adminPassword, logoImgUrl, name, number, link, sector, address,
         phoneNumber, email, adminName, adminPhoneNumber} = req.body;
@@ -177,13 +170,6 @@ exports.postAdmin = async function (req, res) {
     return res.send(signUpResponse);
 };
 
-// TODO: After 로그인 인증 방법 (JWT)
-/**
- * API No. 4
- * API Name : 로그인 API
- * [POST] /app/login
- * body : userName, passsword
- */
 exports.login = async function (req, res) {
     const {ID, password} = req.body;
 
@@ -192,12 +178,6 @@ exports.login = async function (req, res) {
 
     if (!password)
         return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_EMPTY));
-
-    // if (ID.length > 15)
-    //     return res.send(errResponse(baseResponse.SIGNUP_NAME_LENGTH));
-    //
-    // if (password.length > 12 || password.length < 5)
-    //     return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_LENGTH));
 
     const signInResponse = await userService.adminLogin(ID, password);
 
@@ -301,7 +281,6 @@ exports.addCompanyDepartment = async function (req, res) {
     const companyIdx = req.verifiedToken.companyIdx;
     const {department, position} = req.body;
 
-
     const Rows = await userProvider.companyCheck(companyIdx);
 
     if (!Rows)
@@ -385,7 +364,6 @@ exports.postCompanyMember = async function (req, res) {
     const adminID = req.verifiedToken.adminID;
     const companyIdx = req.verifiedToken.companyIdx;
     const {nickname,department,position, gender, age, phoneNumber, address, email, bankAccount} = req.body;
-
 
     const Rows = await userProvider.companyCheck(companyIdx);
 
@@ -822,9 +800,6 @@ exports.updateGift = async function (req, res) {
     return res.send(result);
 };
 
-/** JWT 토큰 검증 API
- * [GET] /app/auto-login
- */
 exports.check = async function (req, res) {
     const userIDResult = req.verifiedToken.userID;
     console.log(userIDResult);

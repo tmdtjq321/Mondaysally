@@ -283,22 +283,9 @@ async function selectMemberByPage(connection,companyIdx){
              on CompanyDepartment.idx = Member.companyDepartmentIdx
          where (Member.status = 'W' or Member.status = 'L') and Member.companyIdx = ?;
     `;
-     var tmp = new Array();
-     var idx = 0;
-     var result = {};
+
      const [Row] = await connection.query(Query,companyIdx);
-     for (let i = 0; i < Row.length; i++){
-         if (i != 0 && (i % 30 == 0)){
-             idx = i / 30;
-             result[idx] = tmp;
-             tmp = [];
-         }
-         tmp.push(Row[i]);
-     }
-     if (tmp.length != 0){
-         idx++;
-         result[idx] = tmp;
-     }
+     var result = pages(Row);
 
      return result;
 }
@@ -324,7 +311,7 @@ async function selectMember(connection,pa){
 async function selectDepartId(connection,params){
     const Query = `
         select * from CompanyDepartment where companyIdx = ? and 
-                                              department = ? and position = ? and status = 'ACTIVE';
+        department = ? and position = ? and status = 'ACTIVE';
     `;
     const [Row] = await connection.query(Query,params);
 
@@ -405,21 +392,7 @@ async function selectGiftlist(connection,companyIdx){
         select imgUrl, name from Gift where status = 'ACTIVE' and companyIdx = ?;
     `;
     const [Row] = await connection.query(Query,companyIdx);
-    var tmp = new Array();
-    var idx = 0;
-    var result = {};
-    for (let i = 0; i < Row.length; i++){
-        if (i != 0 && (i % 30 == 0)){
-            idx = i / 30;
-            result[idx] = tmp;
-            tmp = [];
-        }
-        tmp.push(Row[i]);
-    }
-    if (tmp.length != 0){
-        idx++;
-        result[idx] = tmp;
-    }
+    var result = pages(Row);
 
     return result;
 }
@@ -513,7 +486,7 @@ async function selectGiftLoglist(connection,companyIdx){
         const value = monthResult[key] // 각각의 키에 해당하는 각각의 값
         monthResult[key] = pages(value);
     }
-    result.monthResult = monthResult
+    result.monthResult = monthResult    // 월별 기프트 신청 리스트
 
     return result;
 }
