@@ -208,7 +208,7 @@ exports.selectGifInfonyID = async function (giftID) {
     obj.option = [];
     for (let i in result){
         if (result[i].usedClover && result[i].money){
-            obj.option.push({'usedClover' : result[i].usedClover,'money' : result[i].money});
+            obj.option.push({'idx' : result[i].idx,'usedClover' : result[i].usedClover,'money' : result[i].money});
         }
     }
 

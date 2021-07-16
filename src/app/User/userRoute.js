@@ -2,13 +2,10 @@ module.exports = function (app) {
     const user = require('./userController');
     const jwtMiddleware = require('../../../config/jwtMiddleware');
 
-    // 1. 관리자 (회원가입) API
     app.post('/signup', user.postAdmin);
 
-    // 2. 관리자 로그인 하기 API (JWT 생성)
     app.post('/signin', user.login);
 
-    // SMS
     app.post('/SMS/:status', user.postSMS);
 
     app.patch('/info',jwtMiddleware,user.editAdmin);
@@ -43,12 +40,13 @@ module.exports = function (app) {
 
     app.patch('/gift',jwtMiddleware,user.updateGift);
 
+    app.patch('/gift/:idx',jwtMiddleware,user.deleteGift);
+
     app.get('/giftlog',jwtMiddleware,user.giftLogLists);
 
     app.get('/giftlog/:idx',jwtMiddleware,user.giftLogbyId);
 
     app.patch('/giftlog',jwtMiddleware,user.updateGiftLog);
-
 
 
 };

@@ -336,3 +336,47 @@ exports.updateGiftLogAdmit = async function (giftLogID,permissionCode) {
         return errResponse(baseResponse.DB_ERROR);
     }
 }
+
+exports.updateGiftInfo = async function (giftID,imgUrl, info, rule, deletedOptions, addedOptions) {
+    try {
+        const connection = await pool.getConnection(async (conn) => conn);
+        const params = [imgUrl, info, rule,giftID];
+        const Update = await userDao.updateGiftByid(connection,params);
+
+        for (let i = 0; i < deletedOptions.length; i++){    // 옵션 삭제
+            const del = await userDao.delGiftbyID(connection,deletedOptions[i]);
+        }
+
+        for (let i = 0; i < addedOptions.length; i++){
+            const params = [giftID,addedOptions[i].clover, addedOptions[i].money]
+            const up = await userDao.addGiftOptionbyID(connection,params);
+        }
+
+        connection.release();
+
+        return response(baseResponse.SUCCESS);
+    } catch (err) {
+        logger.error(`App - postSignIn Service error\n: ${err.message} \n${JSON.stringify(err)}`);
+        return errResponse(baseResponse.DB_ERROR);
+    }
+}
+
+exports.deleteGiftInfo = async function (giftID) {
+    try {
+        const connection = await pool.getConnection(async (conn) => conn);
+        const [chk] = await userDao.chkGift(connection,giftID);
+        console.log(chk);
+
+        if (!chk)
+            return errResponse(baseResponse.SIGNUP_GIFTID_NONE);
+
+        const Update = await userDao.deleteGiftByid(connection,giftID);
+
+        connection.release();
+
+        return response(baseResponse.SUCCESS);
+    } catch (err) {
+        logger.error(`App - postSignIn Service error\n: ${err.message} \n${JSON.stringify(err)}`);
+        return errResponse(baseResponse.DB_ERROR);
+    }
+}

@@ -415,7 +415,7 @@ async function GiftnameChk(connection,params){
 
 async function selectGiftbyID(connection,giftID){
     const Query = `select Gift.imgUrl,Gift.name,Gift.info,Gift.rule,Gift.createdAt,
-                    GiftOption.usedClover,GiftOption.money from Gift
+                          GiftOption.idx,GiftOption.usedClover,GiftOption.money from Gift
                     left join GiftOption on Gift.idx = GiftOption.giftIdx and
                                             GiftOption.status = 'ACTIVE'
                    where Gift.idx = ? and Gift.status = 'ACTIVE';`;
@@ -548,6 +548,51 @@ async function updateAdmitGiftLog(connection,params){
     return Row;
 }
 
+async function updateGiftByid(connection,params){
+    const Query = `
+        update Gift set imgUrl = ?, info = ?, rule = ? where idx = ?;
+    `;
+
+    const [Row] = await connection.query(Query,params);
+    return Row;
+}
+
+async function delGiftbyID(connection,optionID){
+    const Query = `
+        update GiftOption set status = 'INACTIVE' where idx = ?;
+    `;
+
+    const [Row] = await connection.query(Query,optionID);
+    return Row;
+}
+
+async function addGiftOptionbyID(connection,params){
+    const Query = `
+        insert into GiftOption(giftIdx,usedClover,money) values (?,?,?);
+    `;
+
+    const [Row] = await connection.query(Query,params);
+    return Row;
+}
+
+async function chkGift(connection,giftID){
+    const Query = `
+        select * from Gift where idx = ?;
+    `;
+
+    const [Row] = await connection.query(Query,giftID);
+    return Row;
+}
+
+async function deleteGiftByid(connection,giftID){
+    const Query = `
+        update Gift set status = 'INACTIVE' where idx = ?;
+    `;
+
+    const [Row] = await connection.query(Query,giftID);
+    return Row;
+}
+
 
 module.exports = {
     selectUser,
@@ -590,7 +635,11 @@ module.exports = {
     selectGiftLoglist,
     selectGiftLogID,
     updateAdmitGiftLog,
-
+    updateGiftByid,
+    delGiftbyID,
+    addGiftOptionbyID,
+    chkGift,
+    deleteGiftByid,
 
 
 };

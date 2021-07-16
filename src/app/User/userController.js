@@ -777,7 +777,51 @@ exports.updateGiftLog = async function (req, res) {
 exports.updateGift = async function (req, res) {
     const adminID = req.verifiedToken.adminID;
     const companyIdx = req.verifiedToken.companyIdx;
-    const {imgUrl, explain, rule, option} = req.body;
+    const {giftIdx, imgUrl, info, rule, deletedOptions, addedOptions} = req.body;
+
+    const Rows = await userProvider.companyCheck(companyIdx);
+
+    if (!Rows)
+        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
+
+    if (!adminID)
+        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
+
+    if (!imgUrl)
+        return res.send(errResponse(baseResponse.SIGNUP_GIFTIMG_EMPTY));
+
+    if (!info)
+        return res.send(errResponse(baseResponse.SIGNUP_GIFTINFO_EMPTY));
+
+    if (!rule)
+        return res.send(errResponse(baseResponse.SIGNUP_GIFTRULE_EMPTY));
+
+    const IDRows = await userProvider.IDCheck(adminID);
+
+    if (!IDRows)
+        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
+
+    if (IDRows.status != 'ACTIVE')
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
+
+    if (!regexURL.test(imgUrl))
+        return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
+
+    if (!Array.isArray(deletedOptions))
+        return res.send(errResponse(baseResponse.SIGNUP_GIFTARRAY_TYPE));
+
+    if (!Array.isArray(addedOptions))
+        return res.send(errResponse(baseResponse.SIGNUP_GIFTARRAY_TYPE));
+
+    const result = await userService.updateGiftInfo(giftIdx, imgUrl, info, rule, deletedOptions, addedOptions);
+
+    return res.send(result);
+};
+
+exports.deleteGift = async function (req, res) {
+    const adminID = req.verifiedToken.adminID;
+    const companyIdx = req.verifiedToken.companyIdx;
+    const giftID = req.params.idx;
 
     const Rows = await userProvider.companyCheck(companyIdx);
 
@@ -795,7 +839,7 @@ exports.updateGift = async function (req, res) {
     if (IDRows.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
 
-    const result = await userService.updateGiftInfo()
+    const result = await userService.deleteGiftInfo(giftID);
 
     return res.send(result);
 };
