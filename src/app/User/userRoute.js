@@ -48,5 +48,6 @@ module.exports = function (app) {
 
     app.patch('/giftlog',jwtMiddleware,user.updateGiftLog);
 
+    app.get('/clover',jwtMiddleware,user.cloverLists);
 
 };

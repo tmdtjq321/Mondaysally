@@ -325,8 +325,20 @@ exports.updateGiftLogAdmit = async function (giftLogID,permissionCode) {
     try {
         const connection = await pool.getConnection(async (conn) => conn);
         const pa = [permissionCode,giftLogID];
-
+        const [Row] = await userDao.GiftLogChk(connection,giftLogID);
+        console.log(Row);
         const Result = await userDao.updateAdmitGiftLog(connection, pa);
+
+        if (permissionCode === 'Y'){
+            const [RO] = await userDao.selectMemberByID(connection,Row.memberIdx);
+            if (!RO){
+                return errResponse(baseResponse.SIGNUP_MEMBER_NONE);
+            }
+
+            const params = [RO.currentClover - Row.usedClover,Row.memberIdx];
+            const Res = await userDao.updateMemberPoint(connection, pa);
+            const insert = await userDao.insertClover(connection,giftLogID);
+        }
 
         connection.release();
 

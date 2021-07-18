@@ -18,7 +18,8 @@ var Regex = require('regex');
 var regexPhone = new RegExp("^[0-9]{10,11}");
 var regexURL = new RegExp("[-a-zA-Z0-9@:%._+~#=]{1,1000}.(png|jpg)");
 var regexAccount = new RegExp("^[0-9]{10,14}");
-var regexLink = new RegExp("^(?:([A-Za-z]+):)?(\\/{0,3})([0-9.\\-A-Za-z]+)(?::(\\d+))?(?:\\/([^?#]*))?(?:\\?([^#]*))?(?:#(.*))?");
+var regexLink = new RegExp("(http|https)?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)");
+var regexDate = new RegExp("^\d{2}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$")
 
 // SMS로 인증코드 전송
 exports.postSMS = async function (req, res) {
@@ -157,7 +158,7 @@ exports.postAdmin = async function (req, res) {
     if (!regexPhone.test(adminPhoneNumber))
         return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
 
-    if (!regexURL.test(logoImgUrl))
+    if (!regexLink.test(logoImgUrl))
         return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
 
     if (!regexLink.test(link))
@@ -171,25 +172,25 @@ exports.postAdmin = async function (req, res) {
 };
 
 exports.login = async function (req, res) {
-    const {ID, password} = req.body;
+    const {id, password} = req.body;
 
-    if (!ID)
+    if (!id)
         return res.send(errResponse(baseResponse.SIGNUP_ID_EMPTY));
 
     if (!password)
         return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_EMPTY));
 
-    const signInResponse = await userService.adminLogin(ID, password);
+    const signInResponse = await userService.adminLogin(id, password);
 
     return res.send(signInResponse);
 
 };
 
 exports.password = async function (req, res) {
-    const {ID, password, updatepassword} = req.body;
+    const {id, password, updatepassword} = req.body;
     console.log(req.body);
 
-    if (!ID)
+    if (!id)
         return res.send(errResponse(baseResponse.SIGNUP_ID_EMPTY));
 
     if (!password)
@@ -198,7 +199,7 @@ exports.password = async function (req, res) {
     if (!updatepassword)
         return res.send(errResponse(baseResponse.SIGNUP_UPPASSWORD_EMPTY));
 
-    const signInResponse = await userService.passwordUpdate(ID, password, updatepassword);
+    const signInResponse = await userService.passwordUpdate(id, password, updatepassword);
 
     return res.send(signInResponse);
 };
@@ -840,6 +841,38 @@ exports.deleteGift = async function (req, res) {
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
 
     const result = await userService.deleteGiftInfo(giftID);
+
+    return res.send(result);
+};
+
+exports.cloverLists = async function (req, res) {
+    const adminID = req.verifiedToken.adminID;
+    const companyIdx = req.verifiedToken.companyIdx;
+    const {date} = req.body;
+
+    const Rows = await userProvider.companyCheck(companyIdx);
+
+    if (!Rows)
+        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
+
+    if (!adminID)
+        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
+
+    if (!date)
+        return res.send(errResponse(baseResponse.SIGNUP_DATE_EMPTY));
+
+    if (!regexDate.test(date))
+        return res.send(errResponse(baseResponse.SIGNUP_DATE_TYPE));
+
+    const IDRows = await userProvider.IDCheck(adminID);
+
+    if (!IDRows)
+        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
+
+    if (IDRows.status != 'ACTIVE')
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
+
+    const result = await userProvider.selectCloverListbyDate(companyIdx,date);
 
     return res.send(result);
 };

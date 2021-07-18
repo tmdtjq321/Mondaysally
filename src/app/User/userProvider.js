@@ -241,3 +241,12 @@ exports.selectGiftLogchk = async function (giftLogID) {
 
     return result;
 };
+
+exports.selectCloverListbyDate = async function (companyIdx,date) {
+    const connection = await pool.getConnection(async (conn) => conn);
+    const params = [date,companyIdx];
+    const [result] = await userDao.selectCloverlists(connection,params);
+    connection.release();
+
+    return result;
+};

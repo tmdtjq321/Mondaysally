@@ -593,6 +593,45 @@ async function deleteGiftByid(connection,giftID){
     return Row;
 }
 
+async function updateMemberPoint(connection,){
+    const Query = `
+        update Member set currentClover = ? where idx = ?;
+    `;
+
+    const [Row] = await connection.query(Query,giftID);
+    return Row;
+}
+
+async function selectCloverlists(connection,params){
+    const Query = `
+        select * from 
+    `;
+
+    const [Row] = await connection.query(Query,giftID);
+    return Row;
+}
+
+async function selectMemberByID(connection,memberID){
+    const Query = `
+        select * from Member where idx = ? and status = 'ACTIVE';
+    `;
+
+    const [Row] = await connection.query(Query,memberID);
+    return Row;
+}
+
+async function insertClover(connection,GiftLogID){
+    const Query = `insert into Clover(memberIdx,giftIdx,optionIdx,companyIdx,point)
+    select GiftLog.memberIdx, GiftLog.giftIdx ,GiftOption.idx, 
+    Member.companyIdx,GiftLog.usedClover from GiftLog 
+    join GiftOption on GiftOption.usedClover = GiftLog.usedClover 
+    and GiftOption.giftIdx = GiftLog.giftIdx
+    join Member on Member.idx = GiftLog.memberIdx
+    where GiftLog.idx = ?;`;
+    const [Row] = await connection.query(Query,GiftLogID);
+    return Row;
+}
+
 
 module.exports = {
     selectUser,
@@ -640,6 +679,10 @@ module.exports = {
     addGiftOptionbyID,
     chkGift,
     deleteGiftByid,
+    selectCloverlists,
+    updateMemberPoint,
+    selectMemberByID,
+    insertClover,
 
 
 };
