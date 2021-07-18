@@ -15,10 +15,10 @@ const SHA256 = require("crypto-js/sha256");
 const Base64 = require("crypto-js/enc-base64");
 
 var Regex = require('regex');
+var regexID = new RegExp("^[a-z]+[a-z0-9]{4,19}$");
 var regexPhone = new RegExp("^[0-9]{10,11}");
-var regexURL = new RegExp("[-a-zA-Z0-9@:%._+~#=]{1,1000}.(png|jpg)");
 var regexAccount = new RegExp("^[0-9]{10,14}");
-var regexLink = new RegExp("(http|https)?:\\/\\/(www\\.)?[-a-zA-Z0-9@:%._\\+~#=]{1,256}\\.[a-zA-Z0-9()]{1,6}\\b([-a-zA-Z0-9()@:%_\\+.~#?&//=]*)");
+var regexLink = new RegExp("((\\w+)[.])+(asia|biz|cc|cn|com|de|eu|in|info|jobs|jp|kr|mobi|mx|name|net|nz|org|travel|tv|tw|uk|us)(\\/(\\w*))*$");
 var regexDate = new RegExp("^\d{2}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$")
 
 // SMS로 인증코드 전송
@@ -149,6 +149,9 @@ exports.postAdmin = async function (req, res) {
         return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_EMPTY));
 
     // 형식 체크 (by 정규표현식)
+    if (!regexID.test(adminId))
+        return res.send(errResponse(baseResponse.SIGNUP_ID_TYPE));
+
     if (!regexEmail.test(email))
         return res.send(errResponse(baseResponse.SIGNUP_EMAIL_ERROR_TYPE));
 
@@ -163,6 +166,33 @@ exports.postAdmin = async function (req, res) {
 
     if (!regexLink.test(link))
         return res.send(errResponse(baseResponse.SIGNUP_LINK_ERROR_TYPE));
+
+    function checkBusinessNumber(bn) {
+        var valueMap = bn
+            .replace(/-/gi, "")
+            .split("")
+            .map(function (item) {
+                return parseInt(item, 10);
+            });
+
+        if (valueMap.length === 10) {
+            var multiply = [1, 3, 7, 1, 3, 7, 1, 3, 5];
+            var checkSum = 0;
+
+            for (var i = 0; i < multiply.length; i++) {
+                checkSum += multiply[i] * valueMap[i];
+            }
+
+            checkSum += parseInt((multiply[8] * valueMap[8]) / 10, 10);
+            return Math.floor(valueMap[9]) === (10 - (checkSum % 10)) % 10;
+        }
+
+        return false;
+    }
+
+    if (!checkBusinessNumber(number))
+        return res.send(errResponse(baseResponse.SIGNUP_NUMBER_TYPE));
+
 
     // 기타 등등 - 추가하기
     const signUpResponse = await userService.createUser(adminId, adminPassword, logoImgUrl, name, number, link, sector, address,
@@ -179,6 +209,9 @@ exports.login = async function (req, res) {
 
     if (!password)
         return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_EMPTY));
+
+    if (!regexID.test(id))
+        return res.send(errResponse(baseResponse.SIGNUP_ID_TYPE));
 
     const signInResponse = await userService.adminLogin(id, password);
 
