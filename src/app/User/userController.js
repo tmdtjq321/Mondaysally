@@ -19,7 +19,8 @@ var regexID = new RegExp("^[a-z]+[a-z0-9]{4,19}$");
 var regexPhone = new RegExp("^[0-9]{10,11}");
 var regexAccount = new RegExp("^[0-9]{10,14}");
 var regexLink = new RegExp("((\\w+)[.])+(asia|biz|cc|cn|com|de|eu|in|info|jobs|jp|kr|mobi|mx|name|net|nz|org|travel|tv|tw|uk|us)(\\/(\\w*))*$");
-var regexDate = new RegExp("^\d{2}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$")
+var regexDate = new RegExp("^\d{2}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$");
+var regexMonth = new RegExp("^\d{2}-(0[1-9]|1[012])$");
 
 // SMS로 인증코드 전송
 exports.postSMS = async function (req, res) {
@@ -161,9 +162,6 @@ exports.postAdmin = async function (req, res) {
     if (!regexPhone.test(adminPhoneNumber))
         return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
 
-    if (!regexLink.test(logoImgUrl))
-        return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
-
     if (!regexLink.test(link))
         return res.send(errResponse(baseResponse.SIGNUP_LINK_ERROR_TYPE));
 
@@ -271,9 +269,6 @@ exports.companyUpdate = async function (req, res) {
     if (adminPhoneNumber && !regexPhone.test(adminPhoneNumber))
         return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
 
-    if (logoImgUrl && !regexURL.test(logoImgUrl))
-        return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
-
     if (link && !regexLink.test(link))
         return res.send(errResponse(baseResponse.SIGNUP_LINK_ERROR_TYPE));
 
@@ -372,6 +367,7 @@ exports.delCompanyDepartment = async function (req, res) {
 exports.CompanyMember = async function (req, res) {
     const adminID = req.verifiedToken.adminID;
     const companyIdx = req.verifiedToken.companyIdx;
+    const page = req.query.page;
 
     const Rows = await userProvider.companyCheck(companyIdx);
 
@@ -389,7 +385,13 @@ exports.CompanyMember = async function (req, res) {
     if (IDRows.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
 
-    const Response = await userProvider.selectMemberPage(companyIdx);
+    if (!page)
+        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
+
+    const Response = await userProvider.selectMemberPage(companyIdx,page);
+
+    if (Response.members.length == 0)
+        return res.send(errResponse(baseResponse.SIG_PAGE_WRONG));
 
     return res.send(response(baseResponse.SUCCESS,Response));
 };
@@ -616,6 +618,10 @@ exports.CompanyMemberDel = async function (req, res) {
 exports.getGift = async function (req, res) {
     const adminID = req.verifiedToken.adminID;
     const companyIdx = req.verifiedToken.companyIdx;
+    const page = req.query.page;
+
+    if (!page)
+        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
 
     const Rows = await userProvider.companyCheck(companyIdx);
 
@@ -633,7 +639,10 @@ exports.getGift = async function (req, res) {
     if (IDRows.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
 
-    const Response = await userProvider.selectGifInfo(companyIdx);
+    const Response = await userProvider.selectGifInfo(companyIdx,page);
+
+    if (Response.gifts.length == 0)
+        return res.send(errResponse(baseResponse.SIG_PAGE_WRONG));
 
     return res.send(response(baseResponse.SUCCESS,Response));
 };
@@ -662,9 +671,6 @@ exports.postGift = async function (req, res) {
 
     if (!rule)
         return res.send(errResponse(baseResponse.SIGNUP_GIFTRULE_EMPTY));
-
-    if (!regexURL.test(imgUrl))
-        return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
 
     const IDRows = await userProvider.IDCheck(adminID);
 
@@ -711,8 +717,11 @@ exports.IDbyGift = async function (req, res) {
 exports.giftLogLists = async function (req, res) {
     const adminID = req.verifiedToken.adminID;
     const companyIdx = req.verifiedToken.companyIdx;
+    const page = req.query.page;
+    const month = req.query.month;
 
     const Rows = await userProvider.companyCheck(companyIdx);
+    console.log(companyIdx);
 
     if (!Rows)
         return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
@@ -728,7 +737,13 @@ exports.giftLogLists = async function (req, res) {
     if (IDRows.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
 
-    const Response = await userProvider.selectGiftLogList(companyIdx);
+    if (!page)
+        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
+
+    if (month && !regexMonth(month))
+        return res.send(errResponse(baseResponse.SIG_MONTH_TYPE));
+
+    const Response = await userProvider.selectGiftLogList(companyIdx,page,month);
 
     return res.send(response(baseResponse.SUCCESS,Response));
 };
@@ -837,9 +852,6 @@ exports.updateGift = async function (req, res) {
 
     if (IDRows.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!regexURL.test(imgUrl))
-        return res.send(errResponse(baseResponse.SIGNUP_URL_ERROR_TYPE));
 
     if (!Array.isArray(deletedOptions))
         return res.send(errResponse(baseResponse.SIGNUP_GIFTARRAY_TYPE));

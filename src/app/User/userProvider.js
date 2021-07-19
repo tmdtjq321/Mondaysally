@@ -88,9 +88,11 @@ exports.selectDepartmentChk = async function (departmentIdx) {
     return result;
 };
 
-exports.selectMemberPage = async function (companyIdx) {
+exports.selectMemberPage = async function (companyIdx,page) {
     const connection = await pool.getConnection(async (conn) => conn);
-    const result = await userDao.selectMemberByPage(connection,companyIdx);
+    const params = [companyIdx,(page-1)*30];
+    console.log(companyIdx);
+    const result = await userDao.selectMemberByPage(connection,params);
     connection.release();
 
     return result;
@@ -182,9 +184,10 @@ exports.memberIDCheck = async function (companyIdx,memberID) {
     return result;
 };
 
-exports.selectGifInfo = async function (companyIdx) {
+exports.selectGifInfo = async function (companyIdx,page) {
     const connection = await pool.getConnection(async (conn) => conn);
-    const result = await userDao.selectGiftlist(connection,companyIdx);
+    const params = [companyIdx,(page-1)*30];
+    const result = await userDao.selectGiftlist(connection,params);
     console.log(result);
 
     connection.release();
@@ -217,13 +220,21 @@ exports.selectGifInfonyID = async function (giftID) {
     return obj;
 };
 
-exports.selectGiftLogList = async function (companyIdx) {
+exports.selectGiftLogList = async function (companyIdx,page,month) {
     const connection = await pool.getConnection(async (conn) => conn);
-    const result = await userDao.selectGiftLoglist(connection,companyIdx);
 
-    connection.release();
+    if (month){
+        const result = await userDao.selectGiftLoglistbyMonth(connection,companyIdx,page,month);
+        connection.release();
 
-    return result;
+        return result;
+    }
+    else{
+        const result = await userDao.selectGiftLoglist(connection,companyIdx,page);
+        connection.release();
+
+        return result;
+    }
 };
 
 exports.selectGiftLogById = async function (giftLogID) {

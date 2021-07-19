@@ -331,12 +331,13 @@ exports.updateGiftLogAdmit = async function (giftLogID,permissionCode) {
 
         if (permissionCode === 'Y'){
             const [RO] = await userDao.selectMemberByID(connection,Row.memberIdx);
+            console.log(RO);
             if (!RO){
                 return errResponse(baseResponse.SIGNUP_MEMBER_NONE);
             }
 
             const params = [RO.currentClover - Row.usedClover,Row.memberIdx];
-            const Res = await userDao.updateMemberPoint(connection, pa);
+            const Res = await userDao.updateMemberPoint(connection, params);
             const insert = await userDao.insertClover(connection,giftLogID);
         }
 
@@ -352,6 +353,12 @@ exports.updateGiftLogAdmit = async function (giftLogID,permissionCode) {
 exports.updateGiftInfo = async function (giftID,imgUrl, info, rule, deletedOptions, addedOptions) {
     try {
         const connection = await pool.getConnection(async (conn) => conn);
+
+        const [chk] = await userDao.chkGift(connection,giftID);
+
+        if (!chk)
+            return errResponse(baseResponse.SIGNUP_GIFTID_NONE);
+
         const params = [imgUrl, info, rule,giftID];
         const Update = await userDao.updateGiftByid(connection,params);
 
