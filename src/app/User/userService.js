@@ -50,7 +50,7 @@ exports.createUser = async function (ID, password, logoImgUrl, name, number, lin
     }
 }
 
-exports.passwordUpdate = async function (ID, password, updatepassword) {
+exports.passwordUpdate = async function (ID, updatepassword) {
     try {
         const IDRows = await userProvider.IDCheck(ID);
 
@@ -59,19 +59,7 @@ exports.passwordUpdate = async function (ID, password, updatepassword) {
 
         if (IDRows.status != 'ACTIVE')
             return errResponse(baseResponse.SIGNUP_COMPANY_WRONG);
-
-        // 비밀번호 확인
-        const hashedPassword = await crypto
-            .createHash("sha512")
-            .update(password)
-            .digest("hex");
-
-        const selectUserPasswordParams = [ID, hashedPassword];
-        const [passwordRows] = await userProvider.passwordCheck(selectUserPasswordParams);
-        if (!passwordRows) {
-            return errResponse(baseResponse.SIGNIN_PASSWORD_WRONG);
-        }
-
+        
         const hashednewPassword = await crypto
             .createHash("sha512")
             .update(updatepassword)
@@ -167,17 +155,25 @@ exports.updateCompanyInfo = async function (adminID, companyIdx, logoImgUrl, nam
 exports.insertDepartment = async function (companyIdx,department, position) {
     try {
         const departmentChk = await userProvider.selectDepartmentUsing(companyIdx,department, position);
-
-        if (departmentChk)
+        console.log(departmentChk);
+        if (departmentChk.status == 'ACTIVE')
             return errResponse(baseResponse.SIGNUP_DEPARTMENT_ALREADY);
 
-        const params = [companyIdx, department, position];
-        const connection = await pool.getConnection(async (conn) => conn);
-        const Result = await userDao.insertCompanyInfo(connection, params);
+        if (!departmentChk){
+            const params = [companyIdx, department, position];
+            const connection = await pool.getConnection(async (conn) => conn);
+            const Result = await userDao.insertCompanyInfo(connection, params);
 
-        connection.release();
+            connection.release();
+            return response(baseResponse.SUCCESS,{'idx' : Result.insertId});
+        }
+        else{
+            const connection = await pool.getConnection(async (conn) => conn);
+            const Result = await userDao.activateCompanyInfo(connection, departmentChk.idx);
 
-        return response(baseResponse.SUCCESS);
+            connection.release();
+            return response(baseResponse.SUCCESS,{'idx' : departmentChk.idx});
+        }
     } catch (err) {
         logger.error(`App - postSignIn Service error\n: ${err.message} \n${JSON.stringify(err)}`);
         return errResponse(baseResponse.DB_ERROR);

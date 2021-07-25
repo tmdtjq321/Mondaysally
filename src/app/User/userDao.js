@@ -11,7 +11,7 @@ async function selectUser(connection) {
 async function selectUserID(connection, ID) {
     const Query = `
                 SELECT *
-                FROM Company where adminId = ? and status = 'ACTIVE';
+                FROM Company where adminId = ?;
                 `;
     const [userRows] = await connection.query(Query,ID);
     return userRows;
@@ -78,67 +78,63 @@ async function updateAdminpassword(connection, params) {
 
 async function selectCompanyList(connection, companyIdx) {
     const Query = `
-        select sum(Clover.point) as calPoint, A.usePoint
-        from Clover join (select companyIdx, sum(point) as usePoint
-                          from Clover where workIdx is null group by companyIdx
-                          having companyIdx = ?) as A
-                         on A.companyIdx = Clover.companyIdx
-        where workIdx is not null;
+        select TRUNCATE(sum(Clover.clover),0) as accumulatedClover, A.usedClover
+        from Clover join (select companyIdx, TRUNCATE(sum(clover),0) as usedClover
+        from Clover where workIdx is null and companyIdx = ? and status = 'ACTIVE') as A
+        on A.companyIdx = Clover.companyIdx
+        where workIdx is not null and status = 'ACTIVE';
     `;
-    const moneyQuery = `select Clover.giftIdx, Clover.optionIdx, Clover.point, 
-            GiftOption.usedClover, GiftOption.money from Clover
-            join GiftOption on GiftOption.idx = Clover.optionIdx
-            where Clover.companyIdx = ?;`
-    const [resultRow] = await connection.query(Query, companyIdx);
-    resultRow[0].calPoint = parseInt(resultRow[0].calPoint);
-    resultRow[0].usePoint = parseInt(resultRow[0].usePoint);
-    resultRow[0].nowPoint = resultRow[0].calPoint - resultRow[0].usePoint;
-    const [Row] = await connection.query(moneyQuery, companyIdx);
-    Row.push(resultRow[0]);
+    const moneyQuery = `select sum(GiftOption.money) as money from Clover
+    join GiftOption on GiftOption.idx = Clover.optionIdx
+    where Clover.companyIdx = ?;`
 
-    return Row;
+    const [resultRow] = await connection.query(Query, companyIdx);
+    resultRow[0].accumulatedClover = parseInt(resultRow[0].accumulatedClover);
+    resultRow[0].usedClover = parseInt(resultRow[0].usedClover);
+    resultRow[0].currentClover = resultRow[0].accumulatedClover - resultRow[0].usedClover;
+    const [Row] = await connection.query(moneyQuery, companyIdx);
+    resultRow[0].money = Row[0].money;
+
+    return resultRow[0];
 }
 
 async function selectMonthCompanyList(connection, companyIdx) {
-    const Query = `
-        select date_format(Clover.createdAt, '%Y-%m') as date, sum(point) as calPoint
-        from Clover WHERE workIdx is not null and companyIdx = ? and
+    const Query = `  
+        select date_format(Clover.createdAt, '%Y-%m') as date, TRUNCATE(sum(clover),0) as accumulatedClover
+        from Clover WHERE workIdx is not null and companyIdx = ? and Clover.status = 'ACTIVE' and 
             date_format(Clover.createdAt, '%Y-%m') like concat ('%', year (now()), '%') group by date;
+    `; // 누적
 
-    `;
-    const moneyQuery = `
-        select date_format(Clover.createdAt, '%Y-%m') as date, sum(point) as calPoint
-        from Clover WHERE workIdx is null and companyIdx = ? and
-            date_format(Clover.createdAt, '%Y-%m') like concat ('%', year (now()), '%') group by date;
-        `;
+    const monthQuery = `select date_format(Clover.createdAt,'%Y-%m') as date, TRUNCATE(sum(Clover.clover),0) as usedClover, 
+        sum(GiftOption.money) as money from Clover
+        join GiftOption on GiftOption.idx = Clover.optionIdx where Clover.companyIdx = ? and workIdx is null
+        and Clover.status = 'ACTIVE' and date_format(Clover.createdAt,'%Y-%m') like concat ('%', year (now()), '%')
+        group by date;`;  // 사용 환산
 
-    const monthQuery = `select Clover.point,GiftOption.usedClover,GiftOption.money,
-     date_format(Clover.createdAt,'%Y-%m') as A from Clover
-    join GiftOption on GiftOption.idx = Clover.optionIdx 
-    where workIdx is null and 
-    date_format(Clover.createdAt,'%Y-%m') like concat ('%', year (now()), '%') 
-    order by Clover.createdAt;`;
-
+    var Row = [];
+    var chk = {};
     var [resultRow] = await connection.query(Query, companyIdx);
-    var [Row] = await connection.query(moneyQuery, companyIdx);
-    var [monthRow] = await connection.query(monthQuery);
-    var obj = {};
-    console.log(monthRow);
-    for (let i in monthRow){
-        obj[monthRow[i].A] = 0;
+    for (let i = 0; i < resultRow.length; i++){
+        var date = resultRow[i].date;
+        chk[date] = resultRow[i];
     }
-    for (let i in monthRow){
-        obj[monthRow[i].A] += (monthRow[i].point / monthRow[i].usedClover) * monthRow[i].money;
-    }
-    console.log(obj);
-    for (let key in obj){
-        for (let i in Row){
-            if (Row[i].date == key){
-                Row[i].money = obj[key];
-                delete obj[key];
-                break;
-            }
+    var [monthRow] = await connection.query(monthQuery, companyIdx);
+    for (let i = 0; i < monthRow.length; i++){
+        var date = monthRow[i].date;
+        if (chk.hasOwnProperty(date)){
+            chk[date].usedClover = monthRow[i].usedClover;
+            chk[date].money = parseInt(monthRow[i].money);
         }
+        else{
+            monthRow[i].accumulatedClover = 0;
+            chk[date] = monthRow[i];
+        }
+    }
+
+    for (var key in chk){
+        if (!chk[key].usedClover){chk[key].usedClover = 0;}
+        if (!chk[key].money){chk[key].money = 0;}
+        Row.push(chk[key]);
     }
 
     return Row;
@@ -158,8 +154,8 @@ async function selectCompanyInfo(connection, companyIdx) {
 async function selectMonthGift(connection) {
     const Query = `
         select date_format(GiftLog.createdAt, '%Y-%m') as date, 
-        count(GiftLog.idx) as cnt from GiftLog
-        where date_format(GiftLog.createdAt, '%Y-%m')
+        count(GiftLog.idx) as giftRequestCount from GiftLog
+        where date_format(GiftLog.createdAt, '%Y-%m') and GiftLog.status = 'ACTIVE'
             like concat ('%' , year(now()), '%') group by date;
     `;
     const [Row] = await connection.query(Query);
@@ -170,7 +166,7 @@ async function selectMonthGift(connection) {
 async function selectGiftrequest(connection,companyIdx) {
     const Query = `
         select Gift.name, Gift.imgUrl, Gift.info,Gift.rule, count(GiftLog.idx) as giftRequest
-        from GiftLog join Gift on Gift.idx = GiftLog.giftIdx
+        from GiftLog join Gift on Gift.idx = GiftLog.giftIdx and GiftLog.status = 'ACTIVE'
         where GiftLog.createdAt <= now() and companyIdx = ? group by giftIdx;
     `;
     const [Row] = await connection.query(Query,companyIdx);
@@ -214,7 +210,7 @@ async function insertCompanyInfo(connection,params) {
         insert into CompanyDepartment(companyIdx, department, position)
         values (?,?,?);
     `;
-    const Row = await connection.query(Query,params);
+    const [Row] = await connection.query(Query,params);
 
     return Row;
 }
@@ -231,7 +227,7 @@ async function deleteCompanyInfo(connection,departmentIdx) {
 async function selectAllpositionchk(connection,departmentIdx){
     const Query = `
         select * from Member where
-            companyDepartmentIdx = ? and status = 'W';
+            companyDepartmentIdx = ? and (status = 'W' or status = 'L');
     `;
     const [Row] = await connection.query(Query,departmentIdx);
 
@@ -249,7 +245,7 @@ async function deleteCompanyDepartment(connection,companyIdx,department){
 
 async function selectCompanyDepartmentUse(connection,params){
     const Query = `
-        select * from CompanyDepartment where status = 'ACTIVE' and companyIdx = ? and department = ?
+        select * from CompanyDepartment where companyIdx = ? and department = ?
         and position = ?;
     `;
     const [Row] = await connection.query(Query,params);
@@ -348,7 +344,7 @@ async function selectMemberByIdx(connection,memberID){
     const Query = `
         select Member.imgUrl, CompanyDepartment.department, CompanyDepartment.position,
             year(now()) - year(Member.createdAt) as workyear, Member.code, Member.email,
-            Member.phoneNumber, Member.bankAccount, Member.address
+            Member.phoneNumber, Member.bankAccount, Member.address, Member.status
         from Member join CompanyDepartment on CompanyDepartment.idx = Member.companyDepartmentIdx
         where Member.idx = ?;
     `;
@@ -519,7 +515,7 @@ async function selectGiftLogID(connection,giftLogID){
                Twinkle.receiptImgUrl, TwinkleImg.imgUrl, Twinkle.createdAt, GiftOption.usedClover, GiftOption.money
         from GiftLog join Member on Member.idx = GiftLog.memberIdx
                      join Gift on GiftLog.giftIdx = Gift.idx
-                     join GiftOption on GiftOption.usedClover = GiftLog.usedClover
+                     join GiftOption on GiftOption.usedClover = GiftLog.usedClover and GiftOption.giftIdx = GiftLog.giftIdx
                      left join Twinkle on Twinkle.giftLogIdx = GiftLog.idx
                      left join TwinkleImg on TwinkleImg.twinkleIdx = Twinkle.idx
         where GiftLog.idx = ? and GiftLog.status = 'ACTIVE';
@@ -624,12 +620,45 @@ async function updateMemberPoint(connection,params){
     return Row;
 }
 
-async function selectCloverlists(connection,params){
+async function selectCloverlists(connection,ID){
     const Query = `
-        select * from 
+        select Member.idx, Member.nickname, Member.imgUrl as memberImg,CompanyDepartment.department,
+               CompanyDepartment.position, Member.accumulatedClover,
+               (Member.accumulatedClover - Member.currentClover) as usedClover,
+               Member.currentClover, A.money from Member
+               join CompanyDepartment on Member.companyDepartmentIdx = CompanyDepartment.idx
+               left join (select Clover.memberIdx, sum(GiftOption.money) as money from Clover
+               join GiftOption on Clover.optionIdx = GiftOption.idx
+               where Clover.companyIdx = ? and Clover.workIdx is null and Clover.status ='ACTIVE'
+               group by Clover.memberIdx) as A on A.memberIdx = Member.idx
+        where Member.companyIdx = ? limit ?, 30;
     `;
 
-    const [Row] = await connection.query(Query,giftID);
+    const [Row] = await connection.query(Query,ID);
+    for (let i = 0; i < Row.length; i++){
+        if (!Row[i].money){
+            Row[i].money = '0';
+        }
+    }
+    return Row;
+}
+
+async function monthCloverlists(connection,param){
+    const Query = `
+        select Member.idx, Member.nickname, Member.imgUrl as memberImg,CompanyDepartment.department,
+               CompanyDepartment.position, A.money, sum(truncate(Clover.clover,0)) as accumulatedClover,
+               A.usedClover from Member
+               join Clover on Member.idx = Clover.memberIdx
+               join CompanyDepartment on Member.companyDepartmentIdx = CompanyDepartment.idx
+               left join (select memberIdx, sum(truncate(Clover.clover,0)) as usedClover,
+               sum(GiftOption.money) as money from Clover join GiftOption on GiftOption.idx = Clover.optionIdx
+               where workIdx is null and Clover.status = 'ACTIVE' group by memberIdx) as A on A.memberIdx = Member.idx
+            where Clover.companyIdx = ? and Clover.status = 'ACTIVE' and workIdx is not null
+          and date_format(Clover.createdAt,'%Y-%m') = ? group by Member.idx
+        order by Member.idx limit ?, 30;
+    `;
+
+    const [Row] = await connection.query(Query,param);
     return Row;
 }
 
@@ -643,7 +672,7 @@ async function selectMemberByID(connection,memberID){
 }
 
 async function insertClover(connection,GiftLogID){
-    const Query = `insert into Clover(memberIdx,giftIdx,optionIdx,companyIdx,point)
+    const Query = `insert into Clover(memberIdx,giftIdx,optionIdx,companyIdx,clover)
     select GiftLog.memberIdx, GiftLog.giftIdx ,GiftOption.idx, 
     Member.companyIdx,GiftLog.usedClover from GiftLog 
     join GiftOption on GiftOption.usedClover = GiftLog.usedClover 
@@ -651,6 +680,13 @@ async function insertClover(connection,GiftLogID){
     join Member on Member.idx = GiftLog.memberIdx
     where GiftLog.idx = ?;`;
     const [Row] = await connection.query(Query,GiftLogID);
+    return Row;
+}
+
+async function activateCompanyInfo(connection,params){
+    const Query = `update CompanyDepartment set status = 'ACTIVE' where idx = ?;`;
+
+    const [Row] = await connection.query(Query,params);
     return Row;
 }
 
@@ -706,6 +742,8 @@ module.exports = {
     selectMemberByID,
     insertClover,
     selectGiftLoglistbyMonth,
+    activateCompanyInfo,
+    monthCloverlists,
 
 
 };

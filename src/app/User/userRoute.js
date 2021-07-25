@@ -10,7 +10,7 @@ module.exports = function (app) {
 
     app.patch('/info',jwtMiddleware,user.editAdmin);
 
-    app.post('/password', user.password);
+    app.patch('/password', user.password);
 
     app.get('/company',jwtMiddleware,user.companylist);
 

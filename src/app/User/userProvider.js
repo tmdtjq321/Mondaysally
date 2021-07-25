@@ -50,12 +50,8 @@ exports.selectCloverlist = async function (companyIdx) {
     var monthGift  = await userDao.selectMonthGift(connection);
     var giftRequest = await userDao.selectGiftrequest(connection,companyIdx);
     connection.release();
-    var sum = 0;
-    for (var i = 0; i < Result.length-1; i++){
-        sum += (Result[i].point / Result[i].usedClover) * Result[i].money;
-    }
-    Result[Result.length-1].sum = sum;
-    obj.totalResult = Result[Result.length-1];
+
+    obj.totalResult = Result;
     obj.monthResult = monthResult;
     obj.monthGifts = monthGift;
     obj.giftRequests = giftRequest;
@@ -253,11 +249,33 @@ exports.selectGiftLogchk = async function (giftLogID) {
     return result;
 };
 
-exports.selectCloverListbyDate = async function (companyIdx,date) {
+exports.selectCloverListbyDate = async function (companyIdx,date,page) {
     const connection = await pool.getConnection(async (conn) => conn);
-    const params = [date,companyIdx];
-    const [result] = await userDao.selectCloverlists(connection,params);
-    connection.release();
+    if (!date){  // 전체
+        const params = [companyIdx,companyIdx,(page-1)*30];
+        const result = await userDao.selectCloverlists(connection,params);
+        connection.release();
+        var obj = {};
+        obj.cloverCount = result.length;
+        obj.cloverLists = result;
 
-    return result;
+        return obj;
+    }
+    else { // 월별
+        const param = [companyIdx,date,(page-1)*30];
+        const result = await userDao.monthCloverlists(connection,param);
+        connection.release();
+        var obj = {};
+        for (let i = 0; i < result.length; i++){
+            if (!result[i].accumulatedClover){ result[i].accumulatedClover = 0}
+            if (!result[i].usedClover){ result[i].usedClover = 0}
+            if (!result[i].money){ result[i].money = '0'}
+            result[i].currentClover = result[i].accumulatedClover - result[i].usedClover;
+        }
+        obj.cloverCount = result.length;
+        obj.cloverLists = result;
+
+        return obj;
+    }
+
 };
