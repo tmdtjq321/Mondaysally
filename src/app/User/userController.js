@@ -2,314 +2,110 @@ const jwtMiddleware = require("../../../config/jwtMiddleware");
 const userProvider = require("../../app/User/userProvider");
 const userService = require("../../app/User/userService");
 const baseResponse = require("../../../config/baseResponseStatus");
-const {response, errResponse} = require("../../../config/response");
-const {logger} = require("../../../config/winston");
+const { response, errResponse } = require("../../../config/response");
+const { logger, logmessage } = require("../../../config/winston");
 const regexEmail = require("regex-email");
-const {emit} = require("nodemon");
-const admin = require('firebase-admin');
-const request = require('request');
-const NAVER_KEY = require("../../../config/NAVER_SENS_CREDENTIAL.json");
-
-const CryptoJS = require("crypto-js");
-const SHA256 = require("crypto-js/sha256");
-const Base64 = require("crypto-js/enc-base64");
+const { emit } = require("nodemon");
+const FCMadmin = require("../../../config/FCM");
 
 var Regex = require('regex');
-var regexID = new RegExp("^[a-z]+[a-z0-9]{4,19}$");
 var regexPhone = new RegExp("^[0-9]{10,11}");
 var regexAccount = new RegExp("^[0-9]{10,14}");
-var regexLink = new RegExp("((\\w+)[.])+(asia|biz|cc|cn|com|de|eu|in|info|jobs|jp|kr|mobi|mx|name|net|nz|org|travel|tv|tw|uk|us)(\\/(\\w*))*$");
-var regexDate = new RegExp("^\d{2}-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])$");
-var regexMonth = new RegExp("^[0-9]{4}-(0[1-9]|1[012])$");
+var regexCode = new RegExp("^([0-9]|[a-z]){8}");
 
-// SMS로 인증코드 전송
-exports.postSMS = async function (req, res) {
-    const {user_phone_number} = req.body;
-    const status = req.params.status;
-    var user_auth_number = Math.random().toString(36).slice(2);
-    var resultCode = 404;
-    var message = '';
-    var ID = '';
+exports.check = async function (req, res) {
+    const idx = req.verifiedToken.memberID;
 
-    if (!user_phone_number)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_EMPTY));
+    const chkID = await userProvider.IDCheck(idx);
 
-    if (status === 1){   // 관리자 변경 및 비밀번호 수정 전 검증
-        const chkPhoneResponse = await userProvider.selectAdminPhone(user_phone_number);
-        if (!chkPhoneResponse){ㄹ
-            return res.send(errResponse(baseResponse.SIGNUP_ID_NONE));
-        }
-        ID = chkPhoneResponse.adminID;
+    if (!chkID)
+        return res.send(errResponse(baseResponse.SIGNUP_NAME_NONE));
+
+    if (!(chkID.status == 'W' || chkID.status == 'L'))
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANYMEMBER_OUT));
+
+    logger.info(logmessage('자동로그인 완료','/auto-login user',idx));
+    return res.send(response(baseResponse.TOKEN_VERIFICATION_SUCCESS));
+};
+
+exports.teamCodeUser = async function (req, res) {
+    const { code } = req.body;
+
+    if (!code)
+        return res.send(errResponse(baseResponse.SIGNUP_CODE_EMPTY));
+
+    // if (!regexCode.test(code))
+    //     return res.send(errResponse(baseResponse.SIGNUP_CODE_WRONG));
+
+    const Rows = await userProvider.codeCheck(code);
+
+    if (!Rows) {
+        return res.send(errResponse(baseResponse.SIGNUP_NAME_NONE));
     }
 
-    const date = Date.now().toString();
-    const uri = NAVER_KEY.uri;
-    const secret_key = NAVER_KEY.secret_key;
-    const access_key = NAVER_KEY.access_key;
-    const method = 'POST';
-    const space = ' ';
-    const newLine = '\n';
-    const url = `https://sens.apigw.ntruss.com/sms/v2/services/${uri}/messages`;
-    const url2 = `/sms/v2/services/${uri}/messages`;
-    const hmac = CryptoJS.algo.HMAC.create(CryptoJS.algo.SHA256, secret_key);
-    hmac.update(method);
-    hmac.update(space);
-    hmac.update(url2);
-    hmac.update(newLine);
-    hmac.update(date);
-    hmac.update(newLine);
-    hmac.update(access_key);
+    const result = await userService.updateMemberCode(code, Rows.idx, Rows.companyIdx);
 
-    const hash = hmac.finalize();
-    const signature = hash.toString(CryptoJS.enc.Base64);
-    request(
-        {
-            method: method,
-            json: true,
-            uri: url,
-            headers: {
-                "Contenc-type": "application/json; charset=utf-8",
-                "x-ncp-iam-access-key": access_key,
-                "x-ncp-apigw-timestamp": date,
-                "x-ncp-apigw-signature-v2": signature,
-            },
-            body: {
-                type: "SMS",
-                countryCode: "82",
-                from: NAVER_KEY.from,
-                content: `인증번호 ${user_auth_number} 입니다.`,
-                messages: [
-                    {
-                        to: `${user_phone_number}`
-                    },
-                ],
-            },
-        },
-        function (err, respon, html) {
-            if (err){
-                return res.send(errResponse(baseResponse.SIGNUP_SERVER_ERROR));
-            }
-            if (html.error){
-                message = html.error.message;
-                return res.send(errResponse(baseResponse.SIGNUP_AUTH_ERROR));
-            }
-            else{
-                resultCode = 200;
-                message = html.statusName;
-                var ans = {};
-                ans.code = user_auth_number;
-                if (status === 1){
-                    ans.ID = ID;
-                }
-                return res.send(response(baseResponse.SUCCESS,ans));
-            }
-        }
-    );
-}
-
-exports.postAdmin = async function (req, res) {
-    const {adminId, adminPassword, logoImgUrl, name, number, link, sector, address,
-        phoneNumber, email, adminName, adminPhoneNumber} = req.body;
-
-    if (!adminId)
-        return res.send(errResponse(baseResponse.SIGNUP_ID_EMPTY));
-
-    if (!adminPassword)
-        return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_EMPTY));
-
-    if (!logoImgUrl)
-        return res.send(errResponse(baseResponse.SIGNUP_LOGOURL_EMPTY));
-
-    if (!name)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYNAME_EMPTY));
-
-    if (!number)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYNUM_EMPTY));
-
-    if (!link)
-        return res.send(errResponse(baseResponse.SIGNUP_LINK_EMPTY));
-
-    if (!sector)
-        return res.send(errResponse(baseResponse.SIGNUP_WORK_EMPTY));
-
-    if (!address)
-        return res.send(errResponse(baseResponse.SIGNUP_ADDRESS_EMPTY));
-
-    if (!phoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYPHONE_EMPTY));
-
-    if (!email)
-        return res.send(errResponse(baseResponse.SIGNUP_EMAIL_EMPTY));
-
-    if (!adminName)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINNAME_EMPTY))
-
-    if (!adminPhoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_EMPTY));
-
-    // 형식 체크 (by 정규표현식)
-    if (!regexID.test(adminId))
-        return res.send(errResponse(baseResponse.SIGNUP_ID_TYPE));
-
-    if (!regexEmail.test(email))
-        return res.send(errResponse(baseResponse.SIGNUP_EMAIL_ERROR_TYPE));
-
-    if (!regexPhone.test(phoneNumber))
-        return res.send(errResponse(baseResponse.SIGNUP_PHONE_ERROR_TYPE));
-
-    if (!regexPhone.test(adminPhoneNumber))
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
-
-    if (!regexLink.test(link))
-        return res.send(errResponse(baseResponse.SIGNUP_LINK_ERROR_TYPE));
-
-    function checkBusinessNumber(bn) {
-        var valueMap = bn
-            .replace(/-/gi, "")
-            .split("")
-            .map(function (item) {
-                return parseInt(item, 10);
-            });
-
-        if (valueMap.length === 10) {
-            var multiply = [1, 3, 7, 1, 3, 7, 1, 3, 5];
-            var checkSum = 0;
-
-            for (var i = 0; i < multiply.length; i++) {
-                checkSum += multiply[i] * valueMap[i];
-            }
-
-            checkSum += parseInt((multiply[8] * valueMap[8]) / 10, 10);
-            return Math.floor(valueMap[9]) === (10 - (checkSum % 10)) % 10;
-        }
-
-        return false;
-    }
-
-    if (!checkBusinessNumber(number))
-        return res.send(errResponse(baseResponse.SIGNUP_NUMBER_TYPE));
-
-
-    // 기타 등등 - 추가하기
-    const signUpResponse = await userService.createUser(adminId, adminPassword, logoImgUrl, name, number, link, sector, address,
-        phoneNumber, email, adminName, adminPhoneNumber);
-
-    return res.send(signUpResponse);
+    logger.info(logmessage('팀코드 매칭 성공','POST /code user',Rows.idx));
+    return res.send(result);
 };
 
-exports.login = async function (req, res) {
-    const {id, password} = req.body;
+exports.companyOut = async function (req, res) {
+    const idx = req.verifiedToken.memberID;
 
-    if (!id)
-        return res.send(errResponse(baseResponse.SIGNUP_ID_EMPTY));
+    const chkID = await userProvider.IDCheck(idx);
 
-    if (!password)
-        return res.send(errResponse(baseResponse.SIGNUP_PASSWORD_EMPTY));
+    if (!chkID)
+        return res.send(errResponse(baseResponse.SIGNUP_NAME_NONE));
 
-    if (!regexID.test(id))
-        return res.send(errResponse(baseResponse.SIGNUP_ID_TYPE));
+    if (!(chkID.status == 'W' || chkID.status == 'L'))
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANYMEMBER_OUT));
 
-    const signInResponse = await userService.adminLogin(id, password);
+    const memberOut = await userService.memberCodeOut(idx);
 
-    return res.send(signInResponse);
-
+    logger.info(logmessage('퇴사 신청 성공','POST /out user',idx));
+    return res.send(memberOut);
 };
 
-exports.password = async function (req, res) {
-    const {id, updatepassword} = req.body;
-    console.log(req.body);
+exports.myPage = async function (req, res) {
+    const idx = req.verifiedToken.memberID;
 
-    if (!id)
-        return res.send(errResponse(baseResponse.SIGNUP_ID_EMPTY));
+    const chkID = await userProvider.IDCheck(idx);
 
-    if (!regexID.test(id))
-        return res.send(errResponse(baseResponse.SIGNUP_ID_TYPE));
+    if (!chkID)
+        return res.send(errResponse(baseResponse.SIGNUP_NAME_NONE));
 
-    if (!updatepassword)
-        return res.send(errResponse(baseResponse.SIGNUP_UPPASSWORD_EMPTY));
+    if (!(chkID.status == 'W' || chkID.status == 'L'))
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANYMEMBER_OUT));
 
-    const signInResponse = await userService.passwordUpdate(id, updatepassword);
+    if (!chkID.companyStatus)
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_EXIT));
 
-    return res.send(signInResponse);
+    if (chkID.companyStatus != 'ACTIVE')
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_NONE));
+
+    const [result] = await userProvider.memberMypage(idx);
+
+    logger.info(logmessage('마이페이지 조회','/mypage user',idx));
+    return res.send(response(baseResponse.SUCCESS, result));
 };
 
-exports.companylist = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
+exports.updateInfo = async function (req, res) {
+    const idx = req.verifiedToken.memberID;
+    const { nickname, imgUrl, phoneNumber, bankAccount, email } = req.body;
 
-    const IDRows = await userProvider.IDCheck(adminID);
+    const chkID = await userProvider.IDCheck(idx);
 
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
+    if (!chkID)
+        return res.send(errResponse(baseResponse.SIGNUP_NAME_NONE));
 
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
+    if (!(chkID.status == 'W' || chkID.status == 'L'))
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANYMEMBER_OUT));
 
-    const Rows = await userProvider.companyCheck(companyIdx);
+    if (!chkID.companyStatus)
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_EXIT));
 
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (Rows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (IDRows.idx != companyIdx)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMIN_WRONG));
-
-    const companyResponse = await userProvider.selectCompanyInfo(companyIdx);
-    const Response = await userProvider.selectCloverlist(companyIdx);
-    Response.company = companyResponse;
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.companyUpdate = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {logoImgUrl, name, number, link, sector, address,phoneNumber,
-        email, adminName, adminPhoneNumber} = req.body;
-
-    const IDRows = await userProvider.IDCheck(adminID);
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (IDRows.idx != companyIdx)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMIN_WRONG));
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (Rows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!logoImgUrl)
-        return res.send(errResponse(baseResponse.SIGNUP_LOGOURL_EMPTY));
-
-    if (!name)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYNAME_EMPTY));
-
-    if (!number)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYNUM_EMPTY));
-
-    if (!link)
-        return res.send(errResponse(baseResponse.SIGNUP_LINK_EMPTY));
-
-    if (!sector)
-        return res.send(errResponse(baseResponse.SIGNUP_WORK_EMPTY));
-
-    if (!address)
-        return res.send(errResponse(baseResponse.SIGNUP_ADDRESS_EMPTY));
-
-    if (!phoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANYPHONE_EMPTY));
-
-    if (!email)
-        return res.send(errResponse(baseResponse.SIGNUP_EMAIL_EMPTY));
-
-    if (!adminName)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINNAME_EMPTY))
-
-    if (!adminPhoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_EMPTY));
+    if (chkID.companyStatus != 'ACTIVE')
+        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_NONE));
 
     if (email && !regexEmail.test(email))
         return res.send(errResponse(baseResponse.SIGNUP_EMAIL_ERROR_TYPE));
@@ -317,699 +113,19 @@ exports.companyUpdate = async function (req, res) {
     if (phoneNumber && !regexPhone.test(phoneNumber))
         return res.send(errResponse(baseResponse.SIGNUP_PHONE_ERROR_TYPE));
 
-    if (adminPhoneNumber && !regexPhone.test(adminPhoneNumber))
+    if (bankAccount && !regexAccount.test(bankAccount))
         return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
 
-    if (link && !regexLink.test(link))
-        return res.send(errResponse(baseResponse.SIGNUP_LINK_ERROR_TYPE));
-
-
-    const Response = await userService.updateCompanyInfo(adminID, companyIdx, logoImgUrl, name, number, link, sector, address,phoneNumber,
-        email, adminName, adminPhoneNumber);
-
-    return res.send(Response);
-};
-
-exports.companyDepartment = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    console.log(companyIdx);
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (Rows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (IDRows.idx != companyIdx)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMIN_WRONG));
-
-    const Response = await userProvider.selectDepartment(companyIdx);
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.addCompanyDepartment = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {department, position} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (Rows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (IDRows.idx != companyIdx)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMIN_WRONG));
-
-    if (!department)
-        return res.send(errResponse(baseResponse.SIGNUP_DEPARTMENT_EMPTY));
-
-    if (!position)
-        return res.send(errResponse(baseResponse.SIGNUP_POSITION_EMPTY));
-
-    const Response = await userService.insertDepartment(companyIdx,department, position);
-
-    return res.send(Response);
-};
-
-exports.delCompanyDepartment = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const departmentIdx = req.params.idx;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (Rows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (IDRows.idx != companyIdx)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMIN_WRONG));
-
-    const Response = await userService.deleteDepartment(departmentIdx);
-
-    return res.send(Response);
-};
-
-exports.CompanyMember = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const page = req.query.page;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!page)
-        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
-
-    const Response = await userProvider.selectMemberPage(companyIdx,page);
-
-    if (Response.members.length == 0)
-        return res.send(errResponse(baseResponse.SIG_PAGE_WRONG));
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.postCompanyMember = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {nickname,department,position, gender, age, phoneNumber, address, email, bankAccount} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return errResponse(baseResponse.SIGNIN_COMPANY_WRONG);
-
-    if (!adminID)
-        return errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE);
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return errResponse(baseResponse.SIGNIN_ID_WRONG);
-
-    if (IDRows.status != 'ACTIVE')
-        return errResponse(baseResponse.SIGNUP_COMPANY_WRONG);
-
-    if (!nickname)
-        return res.send(errResponse(baseResponse.SIGNUP_NICKNAME_EMPTY));
-
-    if (!department)
-        return res.send(errResponse(baseResponse.SIGNUP_DEPARTMENT_EMPTY));
-
-    if (!position)
-        return res.send(errResponse(baseResponse.SIGNUP_POSITION_EMPTY));
-
-    if (!gender)
-        return res.send(errResponse(baseResponse.SIGNUP_GENDER_EMPTY));
-
-    if (!phoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_AGE_EMPTY));
-
-    if (!age)
-        return res.send(errResponse(baseResponse.SIGNUP_AGE_EMPTY));
-
-    if (!phoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBERPHONE_EMPTY));
-
-    if (!address)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBERADDRESS_EMPTY));
-
-    if (!email)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBEREMAIL_EMPTY));
-
-    if (!bankAccount)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBERACCOUNT_EMPTY));
-
-    // 형식 체크 (by 정규표현식)
-    if (!regexEmail.test(email))
-        return res.send(errResponse(baseResponse.SIGNUP_EMAIL_ERROR_TYPE));
-
-    if (!regexPhone.test(phoneNumber))
-        return res.send(errResponse(baseResponse.SIGNUP_PHONE_ERROR_TYPE))
-
-    if (!regexAccount.test(bankAccount))
-        return res.send(errResponse(baseResponse.SIGNUP_ACCOUNT_ERROR_TYPE));
-
-    const result = await userService.insertMember(companyIdx, nickname,department,position, gender, age,
-        phoneNumber, address, email, bankAccount);
-
+    const params = [nickname, imgUrl, phoneNumber, bankAccount, email, idx];
+    for (let i = 0; i < params.length; i++) {
+        if (!params[i]) {
+            params[i] = null;
+        }
+    }
+    console.log(params);
+
+    const result = await userService.updateMypage(params);
+
+    logger.info(logmessage('유저 정보 수정','PATCH /profile user',idx));
     return res.send(result);
-};
-
-exports.editAdmin = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {adminName,adminPhoneNumber} = req.body;
-
-    if (!adminName)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINNAME_EMPTY));
-
-    if (!adminPhoneNumber)
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_EMPTY));
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    if (!regexPhone.test(adminPhoneNumber))
-        return res.send(errResponse(baseResponse.SIGNUP_ADMINPHONE_ERROR_TYPE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-    console.log(IDRows);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Response = await userService.updateAdminInfo(adminID,adminName,adminPhoneNumber);
-
-    return res.send(response(baseResponse.SUCCESS));
-};
-
-exports.CompanyMemberByid = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const memberID = req.params.idx;
-    console.log(companyIdx);
-    console.log(memberID);
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const memberIDchk = await userProvider.memberIDCheck(companyIdx,memberID);
-
-    console.log(memberIDchk);
-
-    if (!memberIDchk)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_WRONG));
-
-    if (!(memberIDchk.status == 'W' || memberIDchk.status == 'L'))
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_OUT));
-
-    const Response = await userProvider.selectMemberById(memberID);
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.CompanyMemberUpdate = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const memberID = req.params.idx;
-    const {department, position} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!department)
-        return res.send(errResponse(baseResponse.SIGNUP_DEPARTMENT_EMPTY));
-
-    if (!position)
-        return res.send(errResponse(baseResponse.SIGNUP_POSITION_EMPTY));
-
-    const memberIDchk = await userProvider.memberIDCheck(companyIdx,memberID);
-
-    if (!memberIDchk)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_WRONG));
-
-    if (!(memberIDchk.status == 'W' || memberIDchk.status == 'L'))
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_OUT));
-
-    const Response = await userService.updateCompanyDepartment(memberID, companyIdx, department, position);
-
-    return res.send(Response);
-};
-
-exports.CompanyMemberDel = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const memberID = req.params.idx;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-
-    const memberIDchk = await userProvider.memberIDCheck(companyIdx,memberID);
-    console.log(memberIDchk);
-
-    if (!memberIDchk)
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_WRONG));
-
-    if (memberIDchk.status != 'A')
-        return res.send(errResponse(baseResponse.SIGNUP_MEMBER_OUT));
-
-    const Response = await userService.deleteCompanyMember(memberID);
-
-    return res.send(Response);
-};
-
-exports.getGift = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const page = req.query.page;
-
-    if (!page)
-        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Response = await userProvider.selectGifInfo(companyIdx,page);
-
-    if (Response.gifts.length == 0)
-        return res.send(errResponse(baseResponse.SIG_PAGE_WRONG));
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.postGift = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {imgUrl, name, info, rule} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    if (!imgUrl)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTIMG_EMPTY));
-
-    if (!name)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTNAME_EMPTY));
-
-    if (!info)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTINFO_EMPTY));
-
-    if (!rule)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTRULE_EMPTY));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Response = await userService.insertGifInfo(companyIdx,imgUrl, name, info, rule);
-
-    return res.send(Response);
-};
-
-exports.IDbyGift = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const giftID = req.params.idx;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Response = await userProvider.selectGifInfonyID(giftID);
-
-    if (!Response)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTID_NONE));
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.giftLogLists = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const page = req.query.page;
-    const month = req.query.month;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-    console.log(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!page)
-        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
-
-    if (month && !regexMonth.test(month))
-        return res.send(errResponse(baseResponse.SIG_MONTH_TYPE));
-
-    const Response = await userProvider.selectGiftLogList(companyIdx,page,month);
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.giftLogbyId = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const giftLogID = req.params.idx;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Response = await userProvider.selectGiftLogById(giftLogID);
-
-    if (!Response)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOG_NONE));
-
-    return res.send(response(baseResponse.SUCCESS,Response));
-};
-
-exports.updateGiftLog = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {giftLogID, permissionCode} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    if (!giftLogID)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOGIDX_EMPTY));
-
-    if (!permissionCode)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOGCODE_EMPTY));
-
-    if (!(permissionCode == 'N' || permissionCode == 'Y'))
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOGCODE_TYPE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const Logchk = await userProvider.selectGiftLogchk(giftLogID);
-
-    if (!Logchk)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOG_NONE));
-
-    if (Logchk.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOG_NONE));
-
-    if (Logchk.isAccepted)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTLOG_STATUS))
-
-    if (Logchk.isProved != 'Y')
-        return res.send(errResponse(baseResponse.SIG_LOG_WRONG));
-
-    const result = await userService.updateGiftLogAdmit(giftLogID,permissionCode)
-
-    return res.send(result);
-};
-
-exports.updateGift = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const {giftIdx, imgUrl, info, rule, deletedOptions, addedOptions} = req.body;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    if (!imgUrl)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTIMG_EMPTY));
-
-    if (!info)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTINFO_EMPTY));
-
-    if (!rule)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTRULE_EMPTY));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    if (!deletedOptions)
-        return res.send(errResponse(baseResponse.SIGNUP_DELOPT_EMPTY));
-
-    if (!addedOptions)
-        return res.send(errResponse(baseResponse.SIGNUP_UPOPT_EMPTY));
-
-    if (!Array.isArray(deletedOptions))
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTARRAY_TYPE));
-
-    if (!Array.isArray(addedOptions))
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTARRAY_TYPE));
-
-    const Response = await userProvider.selectGifInfonyID(giftIdx);
-
-    if (!Response)
-        return res.send(errResponse(baseResponse.SIGNUP_GIFTID_NONE));
-
-    const result = await userService.updateGiftInfo(giftIdx, imgUrl, info, rule, deletedOptions, addedOptions);
-
-    return res.send(result);
-};
-
-exports.deleteGift = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const giftID = req.params.idx;
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const result = await userService.deleteGiftInfo(giftID);
-
-    return res.send(result);
-};
-
-exports.cloverLists = async function (req, res) {
-    const adminID = req.verifiedToken.adminID;
-    const companyIdx = req.verifiedToken.companyIdx;
-    const page = req.query.page;
-    const month = req.query.month;
-    console.log(month);
-
-    if (!page)
-        return res.send(errResponse(baseResponse.SIG_PAGE_NONE));
-
-    if (month && !regexMonth.test(month))
-        return res.send(errResponse(baseResponse.SIG_MONTH_TYPE));
-
-    const Rows = await userProvider.companyCheck(companyIdx);
-
-    if (!Rows)
-        return res.send(errResponse(baseResponse.SIGNIN_COMPANY_WRONG));
-
-    if (!adminID)
-        return res.send(errResponse(baseResponse.TOKEN_VERIFICATION_FAILURE));
-
-    const IDRows = await userProvider.IDCheck(adminID);
-
-    if (!IDRows)
-        return res.send(errResponse(baseResponse.SIGNIN_ID_WRONG));
-
-    if (IDRows.status != 'ACTIVE')
-        return res.send(errResponse(baseResponse.SIGNUP_COMPANY_WRONG));
-
-    const result = await userProvider.selectCloverListbyDate(companyIdx,month,page);
-
-    if (result.cloverLists.length == 0)
-        return res.send(errResponse(baseResponse.SIG_PAGE_WRONG));
-
-    return res.send(response(baseResponse.SUCCESS,result));
-};
-
-exports.check = async function (req, res) {
-    const userIDResult = req.verifiedToken.userID;
-    console.log(userIDResult);
-    return res.send(response(baseResponse.TOKEN_VERIFICATION_SUCCESS));
 };
