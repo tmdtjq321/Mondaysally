@@ -1,0 +1,40 @@
+{
+  "name": "npm",
+  "version": "1.0.0",
+  "description": "Node.js API Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "tmdtjq32",
+  "license": "MIT",
+  "dependencies": {
+    "JSON": "^1.0.0",
+    "body-parser": "^1.19.0",
+    "compression": "^1.7.4",
+    "connect-redis": "^6.0.0",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "ejs": "^3.1.6",
+    "express": "^4.17.1",
+    "express-mysql-session": "^2.1.6",
+    "firebase-admin": "^9.11.1",
+    "http": "0.0.1-security",
+    "ioredis": "^4.27.6",
+    "jsonwebtoken": "^8.5.1",
+    "method-override": "^3.0.0",
+    "mysql": "^2.18.1",
+    "mysql2": "^2.2.5",
+    "node-fetch": "^2.6.1",
+    "pm2": "^5.1.0",
+    "promise-mysql": "^5.0.3",
+    "redis": "^3.1.2",
+    "regex": "^0.1.1",
+    "regex-email": "^1.0.2",
+    "winston": "^3.3.3",
+    "winston-daily-rotate-file": "^4.5.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.9"
+  }
+}

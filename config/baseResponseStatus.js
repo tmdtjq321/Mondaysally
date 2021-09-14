@@ -1,0 +1,72 @@
+module.exports = {
+
+    // Success
+    SUCCESS : { "isSuccess": true, "code": 200, "message":"요청에 성공하였습니다." },
+
+    // Common
+    TOKEN_EMPTY : { "isSuccess": false, "code": 388, "message":"JWT 토큰을 입력해주세요." },
+    TOKEN_VERIFICATION_FAILURE : { "isSuccess": false, "code": 389, "message":"유효하지 않은 JWT토큰입니다." },
+    TOKEN_VERIFICATION_SUCCESS : { "isSuccess": true, "code": 200, "message":"자동로그인에 성공했습니다." }, // ?
+
+    //Request error
+    SERVER_ERROR_UPDATE : { "isSuccess": false, "code": 402, "message":"서버 긴급 점검 중입니다." },
+    SERVER_ERROR_DEVICE : { "isSuccess": false, "code": 402, "message":"ios,aos 타입을 입력해주세요." },
+    SERVER_ERROR_NETWORK : { "isSuccess": false, "code": 404, "message":"네트워크 오류가 발생했습니다." },
+    SIGNUP_EMAIL_ERROR_TYPE : { "isSuccess": false, "code": 313, "message":"이메일을 형식을 정확하게 입력해주세요." },
+    SIGNUP_URL_ERROR_TYPE : { "isSuccess": false, "code": 314, "message":"URL 형식을 정확하게 입력해주세요." },
+    SIGNUP_PHONE_ERROR_TYPE : { "isSuccess": false, "code": 315, "message":"전화번호 형식을 정확하게 입력해주세요." },
+    SIGNUP_ADMINPHONE_ERROR_TYPE : { "isSuccess": false, "code": 316, "message":"계좌번호 형식을 정확하게 입력해주세요." },
+    SIGNUP_CODE_WRONG : { "isSuccess": false, "code": 378, "message":"코드 형식을 정확하게 입력해주세요." },
+    SIGNUP_CODE_EMPTY : { "isSuccess": false, "code": 379, "message":"코드를 입력해주세요." },
+    SERVER_FIREBASETOKEN_EMPTY : { "isSuccess": false, "code": 340, "message":"Firebase Device Token정보를 입력해주세요." },
+    SERVER_FIREBASETOKEN_INVALID : { "isSuccess": false, "code": 342, "message":"Firebase Device Token이 유효하지 않습니다." },
+    SIGNUP_NAME_NONE : { "isSuccess": false, "code": 341, "message":"존재하지 않는 사용자입니다." },
+    SIGNUP_TEAMCODE_WRONG : { "isSuccess": false, "code": 343, "message":"사용중인 팀코드입니다." },
+    SIGNUP_COMPANYMEMBER_WRONG : { "isSuccess": false, "code": 344, "message":"해당 사원은 존재하지 않습니다." },
+    SIGNUP_CODE_ALREADY : { "isSuccess": false, "code": 345, "message":"이미 팀코드를 발급받았습니다." },
+    SIGNUP_COMPANYMEMBER_OUT : { "isSuccess": false, "code": 346, "message":"해당 사원은 탈퇴회원입니다." },
+    SIGNUP_COMPANYMEMBER_EXIT : { "isSuccess": false, "code": 347, "message":"이미 퇴근한 회원입니다." },
+    SIGNUP_GIFT_NONE : { "isSuccess": false, "code": 352, "message":"해당 기프트는 존재하지 않습니다." },
+    SIGNUP_GIFTCLOVER_WRONG : { "isSuccess": false, "code": 353, "message":"신청에 필요한 클로버가 현재 클로버보다 많습니다." },
+    SIGNUP_TOKENTYPE_EMPTY : { "isSuccess": false, "code": 354, "message":"디바이스 타입을 입력해주세요." },
+    SIGNUP_TOKENTYPE_WRONG : { "isSuccess": false, "code": 355, "message":"올바른 디바이스 타입 형식이 아닙니다." },
+    SIGNUP_GIFTLOG_EMPTY : { "isSuccess": false, "code": 356, "message":"증빙할 기프트 신청이 존재하지 않습니다." },
+    SIGNUP_CONTENT_EMPTY : { "isSuccess": false, "code": 357, "message":"게시글이 존재하지 않습니다." },
+    SIGNUP_RECEIPT_EMPTY : { "isSuccess": false, "code": 358, "message":"영수증 이미지가 존재하지 않습니다." },
+    SIGNUP_TWINKLEIMG_EMPTY : { "isSuccess": false, "code": 359, "message":"게시글 이미지가 존재하지 않습니다." },
+    SIGNUP_GIFTLOG_WRONG : { "isSuccess": false, "code": 360, "message":"해당 기프트 신청은 존재하지 않습니다." },
+    SIGNUP_GIFTLOG_ALREADY : { "isSuccess": false, "code": 361, "message":"해당 신청에 대한 트윙클을 이미 작성하였습니다." },
+    SIGNUP_RECEIPT_WRONG : { "isSuccess": false, "code": 362, "message":"영수증 이미지 형식이 올바르지 않습니다." },
+    SIGNUP_TWINKLE_WRONG : { "isSuccess": false, "code": 363, "message":"트윙클 이미지 형식이 올바르지 않습니다." },
+    SIGNUP_TWINKLE_NOT : { "isSuccess": false, "code": 364, "message":"해당 유저가 신청한 기프트가 아닙니다." },
+    SIGNUP_TWINKLE_NONE : { "isSuccess": false, "code": 365, "message":"해당 트윙클은 존재하지 않습니다." },
+    SIGNUP_PAGE_NONE : { "isSuccess": false, "code": 365, "message":"리스트 페이지를 입력하세요." },
+    SIGNUP_PAGE_WRONG : { "isSuccess": false, "code": 366, "message":"해당 페이지는 존재하지 않습니다." },
+    SIGNUP_TWINKLE_DEL : { "isSuccess": false, "code": 367, "message":"해당 트윙클은 삭제되었습니다." },
+    SIGNUP_CONTENT_WRONG : { "isSuccess": false, "code": 368, "message":"게시글 내용은 1~1000글자 내로 작성해주세요." },
+    SIGNUP_TWINKLEIMG_WRONG : { "isSuccess": false, "code": 369, "message":"게시글 이미지는 총 3장이하 입니다." },
+    SIGNUP_COMPANY_EXIT : { "isSuccess": false, "code": 370, "message":"존재하지 않는 회사입니다." },
+    SIGNUP_WRITER_NONE : { "isSuccess": false, "code": 371, "message":"해당 트윙클의 작성자가 아닙니다." },
+    SIGNUP_ADMIN_NOW : { "isSuccess": false, "code": 372, "message":"해당 수정 또는 삭제할 트윙클 이미지는 배열 형식을 지켜주세요." },
+    SIGNUP_IMG_WRONGNOW : { "isSuccess": false, "code": 373, "message":"삭제할 이미지가 게시한 트윙클 이미지보다 많습니다." },
+    SIGNUP_IMG_DEL : { "isSuccess": false, "code": 374, "message":"삭제할 트윙클 리스트를 입력해주세요." },
+    SIGNUP_IMG_UPDATE : { "isSuccess": false, "code": 375, "message":"수정할 트윙클 리스트를 입력해주세요." },
+    SIGNUP_COMMENT_NONE : { "isSuccess": false, "code": 376, "message":"해당 댓글은 존재하지 않습니다." },
+    SIGNUP_COMMENT_DEL : { "isSuccess": false, "code": 381, "message":"해당 댓글은 이미 삭제되었습니다." },
+    SIGNUP_COMMENT_TEXT : { "isSuccess": false, "code": 378, "message":"댓글 내용이 존재하지 않습니다." },
+    SIGNUP_COMMENT_AUTHOR : { "isSuccess": false, "code": 379, "message":"댓글 작성자가 아닙니다." },
+    SIGNUP_COMMENT_WRONG : { "isSuccess": false, "code": 380, "message":"댓글 내용은 1~1000글자 내로 작성해주세요." },
+    SIGNUP_WORK_ALREADY : { "isSuccess": false, "code": 383, "message":"이미 퇴근한 사원입니다." },
+    SIGNUP_TYPE_NONE : { "isSuccess": false, "code": 384, "message":"조회할 타입을 입력해주세요." },
+    SIGNUP_TYPE_WRONG : { "isSuccess": false, "code": 385, "message":"올바른 타입 형식을 입력해주세요." },
+    SIGNUP_PLATFORM_NONE : { "isSuccess": false, "code": 386, "message":"플랫폼 타입을 입력해주세요." },
+    SIGNUP_PLATFORM_WRONG : { "isSuccess": false, "code": 387, "message":"올바른 플랫폼 타입 형식을 입력해주세요." },
+    SIGNUP_ADMIN_NOWON : { "isSuccess": false, "code": 204, "message":"승인 완료인 상태는 게시글 내용만 수정가능합니다." },
+    SIGNUP_COMPANY_NONE : { "isSuccess": false, "code": 377, "message":"탈퇴한 회사입니다." },
+    
+    //Connection, Transaction 등의 서버 오류
+    DB_ERROR : { "isSuccess": false, "code": 409, "message": "데이터 베이스 에러"},
+    SERVER_ERROR : { "isSuccess": false, "code": 404, "message": "네트워크 오류가 발생했습니다."},
+
+
+}

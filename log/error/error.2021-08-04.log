@@ -1,0 +1,68 @@
+2021-08-04 09:15:49.388 error - error!  - home - 1
+2021-08-04 09:16:44.471 error - error!  - home - 1
+2021-08-04 09:17:10.295 error - error!  - home - 1
+2021-08-04 09:20:26.103 error - error!  - home - 1
+2021-08-04 09:22:04.541 error - error!  - home - 1
+2021-08-04 09:29:21.715 error - error!  - home - 1
+2021-08-04 12:46:24.016 error - error!  - home - 1
+2021-08-04 12:53:41.020 error - error!  - home - 1
+2021-08-04 13:10:00.660 error - error!  - home - 9
+2021-08-04 13:24:27.802 error - error!  - home - 12
+2021-08-04 13:26:07.462 error - error!  - home - 12
+2021-08-04 13:27:15.018 error - error!  - home - 1
+2021-08-04 13:29:05.806 error - error!  - home - 1
+2021-08-04 13:29:15.468 error - error!  - home - 12
+2021-08-04 13:31:10.225 error - error!  - home - 9
+2021-08-04 13:33:48.324 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 13:37:56.265 error - error!  - home - 12
+2021-08-04 13:38:21.895 error - error!  - home - 12
+2021-08-04 13:39:54.753 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 13:40:57.251 error - error!  - home - 12
+2021-08-04 13:42:45.415 error - error!  - home - 12
+2021-08-04 13:47:29.106 error - error!  - home - 9
+2021-08-04 13:51:44.224 error - error!  - home - 6
+2021-08-04 13:53:22.847 error - error!  - home - 7
+2021-08-04 13:54:29.606 error - error!  - home - 7
+2021-08-04 13:54:31.589 error - error!  - home - 7
+2021-08-04 13:57:38.207 error - error!  - home - 12
+2021-08-04 13:59:14.307 error - error!  - home - 1
+2021-08-04 13:59:37.082 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 14:00:15.603 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 14:04:40.678 error - error!  - home - 12
+2021-08-04 14:05:44.617 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 14:07:05.323 error - error!  - home - 1
+2021-08-04 14:07:16.941 error - error!  - home - 12
+2021-08-04 14:08:30.052 error - App - postSignIn Service error
+: You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2 
+{"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '' at line 2"}
+2021-08-04 14:21:16.959 error - error!  - home - 12
+2021-08-04 14:21:37.860 error - error!  - home - 12
+2021-08-04 14:23:32.796 error - error!  - home - 12
+2021-08-04 14:23:39.962 error - error!  - home - 12
+2021-08-04 14:23:41.162 error - error!  - home - 12
+2021-08-04 14:23:56.156 error - error!  - home - 12
+2021-08-04 16:14:51.051 error - test errLog 3000
+2021-08-04 16:19:09.280 error - test errLog 3000
+2021-08-04 16:20:11.239 error - test errLog 3000
+2021-08-04 16:20:56.674 error - test errLog 3000
+2021-08-04 16:28:32.258 error - test errLog 3000
+2021-08-04 16:31:04.709 error - test errLog 3000
+2021-08-04 16:36:45.723 error - test errLog 3000
+2021-08-04 18:05:07.004 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:07:11.514 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:09.433 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:11.659 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:12.727 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:13.765 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:14.612 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'is null, imgUrl = 'https://firebasestorage.googleapis.com/v0/b/modaysally.appspo' at line 1"} - 멤버 정보 변경 - undefined
+2021-08-04 18:08:36.302 error - err! {"message":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '?' at line 2","code":"ER_PARSE_ERROR","errno":1064,"sqlState":"42000","sqlMessage":"You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '?' at line 2"} - 멤버 정보 변경 - undefined
