@@ -150,7 +150,7 @@ exports.postTwinkleLike = async function (req, res) {
     if (twinklechk.status != 'ACTIVE')
         return res.send(errResponse(baseResponse.SIGNUP_TWINKLE_DEL));
 
-    const result = await twinkleService.postTwinklelikes(twinklechk.isAos,twinklechk.firebaseToken,nickname,twinkleID, idx);
+    const result = await twinkleService.postTwinklelikes(twinklechk.isAos,twinklechk.firebaseToken,chkID.nickname,twinkleID, idx,twinklechk.memberIdx);
 
     logger.info(logmessage('좋아요 생성','POST /like user',idx));
     return res.send(result);
@@ -315,7 +315,7 @@ exports.postComment = async function (req, res) {
     if (content.length > 1000 || content.length < 1)
         return res.send(errResponse(baseResponse.SIGNUP_COMMENT_WRONG));
 
-    const result = await twinkleService.insertComment(twinklechk.isAos,twinklechk.firebaseToken,chkID.nickname,twinkleIdx, idx, content);
+    const result = await twinkleService.insertComment(twinklechk.isAos,twinklechk.firebaseToken,chkID.nickname,twinkleIdx, idx, content,twinklechk.memberIdx);
 
     logger.info(logmessage('댓글 생성','POST /comment/:twinkleIdx user',idx));
     return res.send(result);

@@ -43,7 +43,7 @@ exports.postTwinkles = async function (memberID, giftLogIdx, content,
     }
 };
 
-exports.postTwinklelikes = async function (isAos,token,name, twinkleID, memberID) {
+exports.postTwinklelikes = async function (isAos,token,name, twinkleID, memberID,authorID) {
 
     const connection = await pool.getConnection(async (conn) => conn);
     try {
@@ -59,14 +59,28 @@ exports.postTwinklelikes = async function (isAos,token,name, twinkleID, memberID
             }
             else {
                 updateStatus = 'ACTIVE';
-                FCMadmin.fcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`);
+                if (memberID != authorID){
+                    if (isAos === 'N'){
+                        FCMadmin.fcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`);
+                    }
+                    else{
+                        FCMadmin.AndroidFcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`,'좋아요',twinkleID);
+                    }
+                }
             }
             const p = [updateStatus, twinkleID, memberID];
             const update = await twinkleDao.updateTwinkleLike(connection, p);
         }
         else {
             const insert = await twinkleDao.insertTwinkleLike(connection, params);
-            FCMadmin.fcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`);
+            if (memberID != authorID){
+                if (isAos === 'N'){
+                    FCMadmin.fcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`);
+                }
+                else{
+                    FCMadmin.AndroidFcm(token,'트윙클',`${name}님이 내 트윙클을 좋아해요!`,'좋아요',twinkleID);
+                }
+            }
         }
         await connection.commit();
 
@@ -150,14 +164,22 @@ exports.updateTwinklebyID = async function (status, twinkleID, content, receiptI
     }
 };
 
-exports.insertComment = async function (isAos,token,name,twinkleIdx, memberID, content) {
+exports.insertComment = async function (isAos,token,name,twinkleIdx, memberID, content,authorID) {
     const connection = await pool.getConnection(async (conn) => conn);
     try {
         await connection.beginTransaction();
         const params = [twinkleIdx, memberID, content];
 
         const insert = await twinkleDao.insertComment(connection, params);
-        FCMadmin.fcm(token,"트윙클",`${name}님이 내 트윙클에 댓글을 남겼어요!`)
+        console.log(token);
+        if (memberID != authorID){
+            if (isAos === 'N'){
+                FCMadmin.fcm(token,"트윙클",`${name}님이 내 트윙클에 댓글을 남겼어요!`);
+            }
+            else{
+                FCMadmin.AndroidFcm(token,"트윙클",`${name}님이 내 트윙클에 댓글을 남겼어요!`,'댓글',twinkleIdx);
+            }
+        }
 
         await connection.commit();
         return response(baseResponse.SUCCESS);
